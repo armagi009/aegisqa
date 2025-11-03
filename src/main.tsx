@@ -15,6 +15,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { PullRequestsPage } from '@/pages/PullRequestsPage';
 import { PullRequestDetailPage } from '@/pages/PullRequestDetailPage';
 import { SettingsPage } from '@/pages/SettingsPage';
+import { SupportPage } from '@/pages/SupportPage';
 const router = createBrowserRouter([
   {
     element: <AppLayout><RouteErrorBoundary /></AppLayout>, // Wrap all routes in AppLayout
@@ -35,6 +36,10 @@ const router = createBrowserRouter([
       {
         path: "/settings",
         element: <SettingsPage />,
+      },
+      {
+        path: "/support",
+        element: <SupportPage />,
       },
     ]
   }

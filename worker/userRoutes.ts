@@ -54,6 +54,13 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         const updatedPr = await controller(c).updatePullRequestStatus(id, status);
         return updatedPr ? c.json({ success: true, data: updatedPr }) : c.json({ success: false, error: 'Pull request not found' }, 404);
     });
+    app.post('/api/pull-requests/:id/evaluate', async (c) => {
+        const { id } = c.req.param();
+        const evaluatedPr = await controller(c).evaluatePullRequest(id);
+        return evaluatedPr
+            ? c.json({ success: true, data: evaluatedPr })
+            : c.json({ success: false, error: 'Pull request not found or already evaluated' }, 404);
+    });
     app.get('/api/repositories', async (c) => {
         const repos = await controller(c).getRepositories();
         return c.json({ success: true, data: repos });

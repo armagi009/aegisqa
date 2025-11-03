@@ -11,18 +11,30 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ResponsiveContainer, BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, startOfWeek, subWeeks, format } from 'date-fns';
 import type { DashboardStats, PullRequest } from '@/lib/types';
-const chartData = [
-  { name: 'Week 1', score: 82 },
-  { name: 'Week 2', score: 85 },
-  { name: 'Week 3', score: 81 },
-  { name: 'Week 4', score: 88 },
-  { name: 'This Week', score: 87 },
-];
+const generateChartData = (prs: PullRequest[]) => {
+  const weeks = Array.from({ length: 5 }).map((_, i) => startOfWeek(subWeeks(new Date(), 4 - i)));
+  const weeklyScores = weeks.map((weekStart, index) => {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    const prsInWeek = prs.filter(pr => {
+      const prDate = new Date(pr.createdAt);
+      return prDate >= weekStart && prDate < weekEnd && pr.status !== 'Pending';
+    });
+    const totalScore = prsInWeek.reduce((sum, pr) => sum + pr.score, 0);
+    const avgScore = prsInWeek.length > 0 ? Math.round(totalScore / prsInWeek.length) : 0;
+    return {
+      name: index === 4 ? 'This Week' : format(weekStart, 'MMM d'),
+      score: avgScore,
+    };
+  });
+  return weeklyScores;
+};
 export function HomePage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentPRs, setRecentPRs] = useState<PullRequest[]>([]);
+  const [chartData, setChartData] = useState<{name: string; score: number}[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -40,7 +52,9 @@ export function HomePage() {
         const statsData = await statsRes.json();
         const prsData = await prsRes.json();
         setStats(statsData.data);
-        setRecentPRs(prsData.data.slice(0, 5));
+        const sortedPRs = prsData.data.sort((a: PullRequest, b: PullRequest) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setRecentPRs(sortedPRs.slice(0, 5));
+        setChartData(generateChartData(prsData.data));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred');
       } finally {
