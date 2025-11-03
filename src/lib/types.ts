@@ -23,14 +23,3 @@ export interface DashboardStats {
   passRate: number;
   reviewRate: number;
 }
-export type RepositoryProvider = 'GitHub' | 'GitLab' | 'Bitbucket';
-export interface Repository {
-  id: string;
-  name: string;
-  provider: RepositoryProvider;
-}
-export interface QualityGates {
-  autoMerge: number;
-  humanReview: number;
-  autoBlock: number;
-}

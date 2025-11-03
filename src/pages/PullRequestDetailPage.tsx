@@ -1,14 +1,17 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { mockPullRequests } from '@/lib/mockData';
 import { PRStatusBadge } from '@/components/PRStatusBadge';
 import { ScoreDonutChart } from '@/components/ScoreDonutChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ArrowLeft, Check, GitMerge, ThumbsDown, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
-const agentColors = {
+import type { PullRequest, AgentName } from '@/lib/types';
+const agentColors: Record<AgentName, string> = {
   Correctness: 'text-blue-500',
   Architecture: 'text-purple-500',
   Security: 'text-red-500',
@@ -16,21 +19,51 @@ const agentColors = {
   Maintainability: 'text-yellow-500',
 };
 export function PullRequestDetailPage() {
-  const { id } = useParams();
-  const pr = mockPullRequests.find((p) => p.id === id);
-  if (!pr) {
+  const { id } = useParams<{ id: string }>();
+  const [pr, setPr] = useState<PullRequest | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!id) return;
+    const fetchPullRequest = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch(`/api/pull-requests/${id}`);
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error('Pull request not found');
+          }
+          throw new Error('Failed to fetch pull request details');
+        }
+        const data = await response.json();
+        setPr(data.data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPullRequest();
+  }, [id]);
+  if (loading) {
+    return <LoadingSkeleton />;
+  }
+  if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center">
-        <h2 className="text-2xl font-bold">Pull Request Not Found</h2>
-        <p className="text-muted-foreground">The requested pull request could not be found.</p>
+      <div className="flex flex-col items-center justify-center h-full text-center p-4">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
         <Button asChild className="mt-4">
-          <Link to="/pull-requests">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Pull Requests
-          </Link>
+          <Link to="/pull-requests"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Pull Requests</Link>
         </Button>
       </div>
     );
+  }
+  if (!pr) {
+    return null; // Should be handled by error state
   }
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -51,9 +84,7 @@ export function PullRequestDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <Card>
-              <CardHeader>
-                <CardTitle>Evaluation Summary</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Evaluation Summary</CardTitle></CardHeader>
               <CardContent>
                 <Accordion type="single" collapsible defaultValue="item-0">
                   {pr.evaluations.map((evaluation, index) => (
@@ -81,9 +112,7 @@ export function PullRequestDetailPage() {
                 <ScoreDonutChart score={pr.score} size={60} />
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  This score represents the overall quality and production-readiness of the code.
-                </p>
+                <p className="text-sm text-muted-foreground">This score represents the overall quality and production-readiness of the code.</p>
                 <div className="flex gap-2">
                   <Button className="w-full bg-success hover:bg-success/90"><GitMerge className="mr-2 h-4 w-4" /> Approve & Merge</Button>
                   <Button variant="destructive" className="w-full"><ThumbsDown className="mr-2 h-4 w-4" /> Reject</Button>
@@ -92,28 +121,62 @@ export function PullRequestDetailPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
-                <CardTitle>Details</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Details</CardTitle></CardHeader>
               <CardContent className="text-sm space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Author</span>
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={pr.authorAvatar} alt={pr.author} />
-                      <AvatarFallback>{pr.author.charAt(0)}</AvatarFallback>
-                    </Avatar>
+                    <Avatar className="h-6 w-6"><AvatarImage src={pr.authorAvatar} alt={pr.author} /><AvatarFallback>{pr.author.charAt(0)}</AvatarFallback></Avatar>
                     <span>{pr.author}</span>
                   </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Repository</span>
-                  <span>{pr.repo}</span>
-                </div>
-                <Button variant="outline" className="w-full mt-2">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View on GitHub
-                </Button>
+                <div className="flex justify-between"><span className="text-muted-foreground">Repository</span><span>{pr.repo}</span></div>
+                <Button variant="outline" className="w-full mt-2"><ExternalLink className="mr-2 h-4 w-4" /> View on GitHub</Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function LoadingSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="py-8 md:py-10">
+        <Skeleton className="h-5 w-48 mb-4" />
+        <header className="mb-8">
+          <Skeleton className="h-9 w-3/4 mb-2" />
+          <div className="flex items-center gap-4 mt-2">
+            <Skeleton className="h-6 w-20 rounded-full" />
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-5 w-32" />
+          </div>
+        </header>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            <Card>
+              <CardHeader><Skeleton className="h-6 w-48" /></CardHeader>
+              <CardContent className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+              </CardContent>
+            </Card>
+          </div>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader><Skeleton className="h-6 w-32" /></CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <div className="flex gap-2"><Skeleton className="h-10 w-1/2" /><Skeleton className="h-10 w-1/2" /></div>
+                <Skeleton className="h-10 w-full" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><Skeleton className="h-6 w-24" /></CardHeader>
+              <CardContent className="space-y-2">
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-10 w-full mt-2" />
               </CardContent>
             </Card>
           </div>
