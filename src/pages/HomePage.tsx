@@ -1,148 +1,134 @@
-// Home page of the app, Currently a demo page for demonstration.
-// Please rewrite this file to implement your own logic. Do not replace or delete it, simply rewrite this HomePage.tsx file.
-import { useEffect } from 'react'
-import { Sparkles } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { ThemeToggle } from '@/components/ThemeToggle'
-import { Toaster, toast } from '@/components/ui/sonner'
-import { create } from 'zustand'
-import { useShallow } from 'zustand/react/shallow'
-import { AppLayout } from '@/components/layout/AppLayout'
-
-// Timer store: independent slice with a clear, minimal API, for demonstration
-type TimerState = {
-  isRunning: boolean;
-  elapsedMs: number;
-  start: () => void;
-  pause: () => void;
-  reset: () => void;
-  tick: (deltaMs: number) => void;
-}
-
-const useTimerStore = create<TimerState>((set) => ({
-  isRunning: false,
-  elapsedMs: 0,
-  start: () => set({ isRunning: true }),
-  pause: () => set({ isRunning: false }),
-  reset: () => set({ elapsedMs: 0, isRunning: false }),
-  tick: (deltaMs) => set((s) => ({ elapsedMs: s.elapsedMs + deltaMs })),
-}))
-
-// Counter store: separate slice to showcase multiple stores without coupling
-type CounterState = {
-  count: number;
-  inc: () => void;
-  reset: () => void;
-}
-
-const useCounterStore = create<CounterState>((set) => ({
-  count: 0,
-  inc: () => set((s) => ({ count: s.count + 1 })),
-  reset: () => set({ count: 0 }),
-}))
-
-function formatDuration(ms: number): string {
-  const total = Math.max(0, Math.floor(ms / 1000))
-  const m = Math.floor(total / 60)
-  const s = total % 60
-  return `${m}:${s.toString().padStart(2, '0')}`
-}
-
+import { Link } from 'react-router-dom';
+import { BarChart, CheckCircle, GitPullRequest, Shield, TrendingUp } from 'lucide-react';
+import { dashboardStats, mockPullRequests } from '@/lib/mockData';
+import { DashboardStatsCard } from '@/components/DashboardStatsCard';
+import { PRStatusBadge } from '@/components/PRStatusBadge';
+import { ScoreDonutChart } from '@/components/ScoreDonutChart';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { ResponsiveContainer, BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { formatDistanceToNow } from 'date-fns';
+const chartData = [
+  { name: 'Week 1', score: 82 },
+  { name: 'Week 2', score: 85 },
+  { name: 'Week 3', score: 81 },
+  { name: 'Week 4', score: 88 },
+  { name: 'This Week', score: 87 },
+];
 export function HomePage() {
-  // Select only what is needed to avoid unnecessary re-renders
-  const { isRunning, elapsedMs } = useTimerStore(
-    useShallow((s) => ({ isRunning: s.isRunning, elapsedMs: s.elapsedMs })),
-  )
-  const start = useTimerStore((s) => s.start)
-  const pause = useTimerStore((s) => s.pause)
-  const resetTimer = useTimerStore((s) => s.reset)
-  const count = useCounterStore((s) => s.count)
-  const inc = useCounterStore((s) => s.inc)
-  const resetCount = useCounterStore((s) => s.reset)
-
-  // Drive the timer only while running; avoid update-depth issues with a scoped RAF
-  useEffect(() => {
-    if (!isRunning) return
-    let raf = 0
-    let last = performance.now()
-    const loop = () => {
-      const now = performance.now()
-      const delta = now - last
-      last = now
-      // Read store API directly to keep effect deps minimal and stable
-      useTimerStore.getState().tick(delta)
-      raf = requestAnimationFrame(loop)
-    }
-    raf = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(raf)
-  }, [isRunning])
-
-  const onPleaseWait = () => {
-    inc()
-    if (!isRunning) {
-      start()
-      toast.success('Building your app…', {
-        description: 'Hang tight, we\'re setting everything up.',
-      })
-    } else {
-      pause()
-      toast.info('Taking a short pause', {
-        description: 'We\'ll continue shortly.',
-      })
-    }
-  }
-
-  const formatted = formatDuration(elapsedMs)
-
+  const recentPRs = mockPullRequests.slice(0, 5);
   return (
-    <AppLayout>
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4 overflow-hidden relative">
-        <ThemeToggle />
-        <div className="absolute inset-0 bg-gradient-rainbow opacity-10 dark:opacity-20 pointer-events-none" />
-        <div className="text-center space-y-8 relative z-10 animate-fade-in">
-          <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-primary floating">
-              <Sparkles className="w-8 h-8 text-white rotating" />
-            </div>
-          </div>
-          <h1 className="text-5xl md:text-7xl font-display font-bold text-balance leading-tight">
-            Creating your <span className="text-gradient">app</span>
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto text-pretty">
-            Your application would be ready soon.
-          </p>
-          <div className="flex justify-center gap-4">
-            <Button 
-              size="lg"
-              onClick={onPleaseWait}
-              className="btn-gradient px-8 py-4 text-lg font-semibold hover:-translate-y-0.5 transition-all duration-200"
-              aria-live="polite"
-            >
-              Please Wait
-            </Button>
-          </div>
-          <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
-            <div>
-              Time elapsed: <span className="font-medium tabular-nums text-foreground">{formatted}</span>
-            </div>
-            <div>
-              Coins: <span className="font-medium tabular-nums text-foreground">{count}</span>
-            </div>
-          </div>
-          <div className="flex justify-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => { resetTimer(); resetCount(); toast('Reset complete') }}>
-              Reset
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => { inc(); toast('Coin added') }}>
-              Add Coin
-            </Button>
-          </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="py-8 md:py-10">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold font-display tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Welcome back! Here's a summary of your QA activities.</p>
+        </header>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          <DashboardStatsCard
+            title="PRs Processed"
+            value={dashboardStats.prsProcessed}
+            icon={<GitPullRequest className="h-5 w-5 text-muted-foreground" />}
+            change={5.2}
+            changeType="increase"
+          />
+          <DashboardStatsCard
+            title="Average Score"
+            value={dashboardStats.avgScore}
+            icon={<Shield className="h-5 w-5 text-muted-foreground" />}
+            change={1.5}
+            changeType="increase"
+          />
+          <DashboardStatsCard
+            title="Pass Rate"
+            value={`${dashboardStats.passRate}%`}
+            icon={<CheckCircle className="h-5 w-5 text-muted-foreground" />}
+            change={2.1}
+            changeType="decrease"
+          />
+          <DashboardStatsCard
+            title="Review Rate"
+            value={`${dashboardStats.reviewRate}%`}
+            icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />}
+          />
         </div>
-        <footer className="absolute bottom-8 text-center text-muted-foreground/80">
-          <p>Powered by Cloudflare</p>
-        </footer>
-        <Toaster richColors closeButton />
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          <Card className="lg:col-span-3">
+            <CardHeader>
+              <CardTitle>Weekly Average Score</CardTitle>
+              <CardDescription>A look at the average quality score over the last 5 weeks.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px] w-full">
+              <ResponsiveContainer>
+                <RechartsBarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
+                  <YAxis domain={[70, 100]} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'hsl(var(--background))',
+                      borderColor: 'hsl(var(--border))',
+                    }}
+                  />
+                  <Bar dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          <Card className="lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Recent Pull Requests</CardTitle>
+                <CardDescription>The latest PRs being evaluated.</CardDescription>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/pull-requests">View All</Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>PR</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Score</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentPRs.map((pr) => (
+                    <TableRow key={pr.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={pr.authorAvatar} alt={pr.author} />
+                            <AvatarFallback>{pr.author.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <Link to={`/pull-requests/${pr.id}`} className="font-medium hover:underline leading-tight block">
+                              {pr.title}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">
+                              {pr.repo} &middot; {formatDistanceToNow(new Date(pr.createdAt), { addSuffix: true })}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <PRStatusBadge status={pr.status} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {pr.status !== 'Pending' ? <ScoreDonutChart score={pr.score} size={32} /> : <span className="text-muted-foreground">-</span>}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </AppLayout>
-  )
+    </div>
+  );
 }

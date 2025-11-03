@@ -11,15 +11,34 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 import '@/index.css'
 import { HomePage } from '@/pages/HomePage'
-
+import { AppLayout } from '@/components/layout/AppLayout';
+import { PullRequestsPage } from '@/pages/PullRequestsPage';
+import { PullRequestDetailPage } from '@/pages/PullRequestDetailPage';
+import { SettingsPage } from '@/pages/SettingsPage';
 const router = createBrowserRouter([
   {
-    path: "/",
-    element: <HomePage />,
+    element: <AppLayout><RouteErrorBoundary /></AppLayout>, // Wrap all routes in AppLayout
     errorElement: <RouteErrorBoundary />,
-  },
+    children: [
+      {
+        path: "/",
+        element: <HomePage />,
+      },
+      {
+        path: "/pull-requests",
+        element: <PullRequestsPage />,
+      },
+      {
+        path: "/pull-requests/:id",
+        element: <PullRequestDetailPage />,
+      },
+      {
+        path: "/settings",
+        element: <SettingsPage />,
+      },
+    ]
+  }
 ]);
-
 // Do not touch this code
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -28,4 +47,3 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 )
-   

@@ -1,28 +1,27 @@
 import React from "react";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
-
+import { AegisSidebar } from "@/components/AegisSidebar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 type AppLayoutProps = {
   children: React.ReactNode;
-  container?: boolean;
-  className?: string;
-  contentClassName?: string;
 };
-
-export function AppLayout({ children, container = false, className, contentClassName }: AppLayoutProps): JSX.Element {
+export function AppLayout({ children }: AppLayoutProps): JSX.Element {
   return (
-    <SidebarProvider defaultOpen={false}>
-      <AppSidebar />
-      <SidebarInset className={className}>
-        <div className="absolute left-2 top-2 z-20">
-          <SidebarTrigger />
-        </div>
-        {container ? (
-          <div className={"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12" + (contentClassName ? ` ${contentClassName}` : "")}>{children}</div>
-        ) : (
-          children
-        )}
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="min-h-screen w-full bg-muted/40">
+      <AegisSidebar />
+      <div className="sm:pl-64 flex flex-col min-h-screen">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+          {/* Header content can go here, for now we just have the theme toggle */}
+          <div className="ml-auto">
+            <ThemeToggle className="relative top-0 right-0" />
+          </div>
+        </header>
+        <main className="flex-1">
+          {children}
+        </main>
+        <footer className="aegis-footer sm:pl-64">
+          <p>Built with ❤️ at Cloudflare. Note: AI capabilities have a request limit across all user apps in a given time period.</p>
+        </footer>
+      </div>
+    </div>
   );
 }

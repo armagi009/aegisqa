@@ -14,6 +14,7 @@ export default {
   				'sans-serif'
   			],
   			display: [
+          'Sora',
   				'Cal Sans',
   				'Inter',
   				'system-ui',
@@ -101,6 +102,18 @@ export default {
   				DEFAULT: 'hsl(var(--primary))',
   				foreground: 'hsl(var(--primary-foreground))'
   			},
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))'
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))'
+        },
+        danger: {
+          DEFAULT: 'hsl(var(--danger))',
+          foreground: 'hsl(var(--danger-foreground))'
+        },
   			border: 'hsl(var(--border))',
   			ring: 'hsl(var(--ring))',
   			card: {
