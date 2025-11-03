@@ -1,7 +1,7 @@
 import { CheckCircle, XCircle, AlertTriangle, GitMerge, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { PRStatus } from '@/lib/mockData';
+import type { PRStatus } from '@/lib/types';
 interface PRStatusBadgeProps {
   status: PRStatus;
   className?: string;

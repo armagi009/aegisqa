@@ -3,6 +3,7 @@ import { getAgentByName } from 'agents';
 import { ChatAgent } from './agent';
 import { API_RESPONSES } from './config';
 import { Env, getAppController, registerSession, unregisterSession } from "./core-utils";
+import type { PRStatus, Repository } from "./data";
 /**
  * DO NOT MODIFY THIS FUNCTION. Only for your reference.
  */
@@ -29,168 +30,86 @@ export function coreRoutes(app: Hono<{ Bindings: Env }>) {
     });
 }
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
+    const controller = (c: any) => getAppController(c.env);
     // AegisQA API Routes
     app.get('/api/dashboard-stats', async (c) => {
-        try {
-            const controller = getAppController(c.env);
-            const stats = await controller.getDashboardStats();
-            return c.json({ success: true, data: stats });
-        } catch (error) {
-            console.error('Failed to get dashboard stats:', error);
-            return c.json({ success: false, error: 'Failed to retrieve dashboard stats' }, { status: 500 });
-        }
+        const stats = await controller(c).getDashboardStats();
+        return c.json({ success: true, data: stats });
     });
     app.get('/api/pull-requests', async (c) => {
-        try {
-            const controller = getAppController(c.env);
-            const prs = await controller.getPullRequests();
-            return c.json({ success: true, data: prs });
-        } catch (error) {
-            console.error('Failed to get pull requests:', error);
-            return c.json({ success: false, error: 'Failed to retrieve pull requests' }, { status: 500 });
-        }
+        const prs = await controller(c).getPullRequests();
+        return c.json({ success: true, data: prs });
     });
     app.get('/api/pull-requests/:id', async (c) => {
-        try {
-            const { id } = c.req.param();
-            const controller = getAppController(c.env);
-            const pr = await controller.getPullRequestById(id);
-            if (!pr) {
-                return c.json({ success: false, error: 'Pull request not found' }, { status: 404 });
-            }
-            return c.json({ success: true, data: pr });
-        } catch (error) {
-            console.error('Failed to get pull request:', error);
-            return c.json({ success: false, error: 'Failed to retrieve pull request' }, { status: 500 });
+        const { id } = c.req.param();
+        const pr = await controller(c).getPullRequestById(id);
+        return pr ? c.json({ success: true, data: pr }) : c.json({ success: false, error: 'Pull request not found' }, 404);
+    });
+    app.patch('/api/pull-requests/:id/status', async (c) => {
+        const { id } = c.req.param();
+        const { status } = await c.req.json<{ status: PRStatus }>();
+        if (!['Merged', 'Review', 'Blocked', 'Pending'].includes(status)) {
+            return c.json({ success: false, error: 'Invalid status provided' }, 400);
         }
+        const updatedPr = await controller(c).updatePullRequestStatus(id, status);
+        return updatedPr ? c.json({ success: true, data: updatedPr }) : c.json({ success: false, error: 'Pull request not found' }, 404);
+    });
+    app.get('/api/repositories', async (c) => {
+        const repos = await controller(c).getRepositories();
+        return c.json({ success: true, data: repos });
+    });
+    app.post('/api/repositories', async (c) => {
+        const { url } = await c.req.json<{ url: string }>();
+        if (!url || !url.includes('/')) {
+            return c.json({ success: false, error: 'Invalid repository URL' }, 400);
+        }
+        const name = url.split('/').slice(-2).join('/');
+        const provider = url.includes('github') ? 'GitHub' : url.includes('gitlab') ? 'GitLab' : 'Bitbucket';
+        const newRepo: Repository = { id: crypto.randomUUID(), name, provider };
+        const addedRepo = await controller(c).addRepository(newRepo);
+        return c.json({ success: true, data: addedRepo }, 201);
+    });
+    app.delete('/api/repositories/:id', async (c) => {
+        const { id } = c.req.param();
+        const success = await controller(c).removeRepository(id);
+        return success ? c.json({ success: true }) : c.json({ success: false, error: 'Repository not found' }, 404);
+    });
+    app.get('/api/quality-gates', async (c) => {
+        const gates = await controller(c).getQualityGates();
+        return c.json({ success: true, data: gates });
+    });
+    app.patch('/api/quality-gates', async (c) => {
+        const newGates = await c.req.json();
+        const updatedGates = await controller(c).updateQualityGates(newGates);
+        return c.json({ success: true, data: updatedGates });
     });
     // Session Management Routes
     app.get('/api/sessions', async (c) => {
-        try {
-            const controller = getAppController(c.env);
-            const sessions = await controller.listSessions();
-            return c.json({ success: true, data: sessions });
-        } catch (error) {
-            console.error('Failed to list sessions:', error);
-            return c.json({
-                success: false,
-                error: 'Failed to retrieve sessions'
-            }, { status: 500 });
-        }
+        const sessions = await controller(c).listSessions();
+        return c.json({ success: true, data: sessions });
     });
     app.post('/api/sessions', async (c) => {
-        try {
-            const body = await c.req.json().catch(() => ({}));
-            const { title, sessionId: providedSessionId, firstMessage } = body;
-            const sessionId = providedSessionId || crypto.randomUUID();
-            let sessionTitle = title;
-            if (!sessionTitle) {
-                const now = new Date();
-                const dateTime = now.toLocaleString([], {
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-                if (firstMessage && firstMessage.trim()) {
-                    const cleanMessage = firstMessage.trim().replace(/\s+/g, ' ');
-                    const truncated = cleanMessage.length > 40
-                        ? cleanMessage.slice(0, 37) + '...'
-                        : cleanMessage;
-                    sessionTitle = `${truncated} • ${dateTime}`;
-                } else {
-                    sessionTitle = `Chat ${dateTime}`;
-                }
+        const body = await c.req.json().catch(() => ({}));
+        const { title, sessionId: providedSessionId, firstMessage } = body;
+        const sessionId = providedSessionId || crypto.randomUUID();
+        let sessionTitle = title;
+        if (!sessionTitle) {
+            const now = new Date();
+            const dateTime = now.toLocaleString([], { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+            if (firstMessage && firstMessage.trim()) {
+                const cleanMessage = firstMessage.trim().replace(/\s+/g, ' ');
+                const truncated = cleanMessage.length > 40 ? cleanMessage.slice(0, 37) + '...' : cleanMessage;
+                sessionTitle = `${truncated} • ${dateTime}`;
+            } else {
+                sessionTitle = `Chat ${dateTime}`;
             }
-            await registerSession(c.env, sessionId, sessionTitle);
-            return c.json({
-                success: true,
-                data: { sessionId, title: sessionTitle }
-            });
-        } catch (error) {
-            console.error('Failed to create session:', error);
-            return c.json({
-                success: false,
-                error: 'Failed to create session'
-            }, { status: 500 });
         }
+        await registerSession(c.env, sessionId, sessionTitle);
+        return c.json({ success: true, data: { sessionId, title: sessionTitle } });
     });
     app.delete('/api/sessions/:sessionId', async (c) => {
-        try {
-            const sessionId = c.req.param('sessionId');
-            const deleted = await unregisterSession(c.env, sessionId);
-            if (!deleted) {
-                return c.json({
-                    success: false,
-                    error: 'Session not found'
-                }, { status: 404 });
-            }
-            return c.json({ success: true, data: { deleted: true } });
-        } catch (error) {
-            console.error('Failed to delete session:', error);
-            return c.json({
-                success: false,
-                error: 'Failed to delete session'
-            }, { status: 500 });
-        }
-    });
-    app.put('/api/sessions/:sessionId/title', async (c) => {
-        try {
-            const sessionId = c.req.param('sessionId');
-            const { title } = await c.req.json();
-            if (!title || typeof title !== 'string') {
-                return c.json({
-                    success: false,
-                    error: 'Title is required'
-                }, { status: 400 });
-            }
-            const controller = getAppController(c.env);
-            const updated = await controller.updateSessionTitle(sessionId, title);
-            if (!updated) {
-                return c.json({
-                    success: false,
-                    error: 'Session not found'
-                }, { status: 404 });
-            }
-            return c.json({ success: true, data: { title } });
-        } catch (error) {
-            console.error('Failed to update session title:', error);
-            return c.json({
-                success: false,
-                error: 'Failed to update session title'
-            }, { status: 500 });
-        }
-    });
-    app.get('/api/sessions/stats', async (c) => {
-        try {
-            const controller = getAppController(c.env);
-            const count = await controller.getSessionCount();
-            return c.json({
-                success: true,
-                data: { totalSessions: count }
-            });
-        } catch (error) {
-            console.error('Failed to get session stats:', error);
-            return c.json({
-                success: false,
-                error: 'Failed to retrieve session stats'
-            }, { status: 500 });
-        }
-    });
-    app.delete('/api/sessions', async (c) => {
-        try {
-            const controller = getAppController(c.env);
-            const deletedCount = await controller.clearAllSessions();
-            return c.json({
-                success: true,
-                data: { deletedCount }
-            });
-        } catch (error) {
-            console.error('Failed to clear all sessions:', error);
-            return c.json({
-                success: false,
-                error: 'Failed to clear all sessions'
-            }, { status: 500 });
-        }
+        const sessionId = c.req.param('sessionId');
+        const deleted = await unregisterSession(c.env, sessionId);
+        return deleted ? c.json({ success: true, data: { deleted: true } }) : c.json({ success: false, error: 'Session not found' }, 404);
     });
 }

@@ -1,11 +1,14 @@
 import { DurableObject } from 'cloudflare:workers';
 import type { SessionInfo } from './types';
 import type { Env } from './core-utils';
-import { dashboardStats, mockPullRequests, PullRequest, DashboardStats } from './data';
+import { dashboardStats, mockPullRequests, mockRepositories, mockQualityGates } from './data';
+import type { PullRequest, DashboardStats, PRStatus, Repository, QualityGates } from './data';
 export class AppController extends DurableObject<Env> {
   private sessions = new Map<string, SessionInfo>();
   private pullRequests: PullRequest[] = [];
   private dashboardStats: DashboardStats | null = null;
+  private repositories: Repository[] = [];
+  private qualityGates: QualityGates | null = null;
   private loaded = false;
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -14,13 +17,11 @@ export class AppController extends DurableObject<Env> {
     if (!this.loaded) {
       const storedSessions = await this.ctx.storage.get<Record<string, SessionInfo>>('sessions') || {};
       this.sessions = new Map(Object.entries(storedSessions));
-      // Seed PR and stats data if not present (simple in-memory for this phase)
-      if (this.pullRequests.length === 0) {
-        this.pullRequests = mockPullRequests;
-      }
-      if (!this.dashboardStats) {
-        this.dashboardStats = dashboardStats;
-      }
+      // Seed data if not present (simple in-memory for this phase)
+      if (this.pullRequests.length === 0) this.pullRequests = JSON.parse(JSON.stringify(mockPullRequests));
+      if (!this.dashboardStats) this.dashboardStats = { ...dashboardStats };
+      if (this.repositories.length === 0) this.repositories = JSON.parse(JSON.stringify(mockRepositories));
+      if (!this.qualityGates) this.qualityGates = { ...mockQualityGates };
       this.loaded = true;
     }
   }
@@ -39,6 +40,39 @@ export class AppController extends DurableObject<Env> {
   async getPullRequestById(id: string): Promise<PullRequest | undefined> {
     await this.ensureLoaded();
     return this.pullRequests.find(pr => pr.id === id);
+  }
+  async updatePullRequestStatus(id: string, status: PRStatus): Promise<PullRequest | null> {
+    await this.ensureLoaded();
+    const prIndex = this.pullRequests.findIndex(pr => pr.id === id);
+    if (prIndex > -1) {
+      this.pullRequests[prIndex].status = status;
+      return this.pullRequests[prIndex];
+    }
+    return null;
+  }
+  async getRepositories(): Promise<Repository[]> {
+    await this.ensureLoaded();
+    return this.repositories;
+  }
+  async addRepository(repo: Repository): Promise<Repository> {
+    await this.ensureLoaded();
+    this.repositories.push(repo);
+    return repo;
+  }
+  async removeRepository(id: string): Promise<boolean> {
+    await this.ensureLoaded();
+    const initialLength = this.repositories.length;
+    this.repositories = this.repositories.filter(repo => repo.id !== id);
+    return this.repositories.length < initialLength;
+  }
+  async getQualityGates(): Promise<QualityGates | null> {
+    await this.ensureLoaded();
+    return this.qualityGates;
+  }
+  async updateQualityGates(gates: QualityGates): Promise<QualityGates> {
+    await this.ensureLoaded();
+    this.qualityGates = { ...this.qualityGates, ...gates };
+    return this.qualityGates;
   }
   // Session Management Methods
   async addSession(sessionId: string, title?: string): Promise<void> {

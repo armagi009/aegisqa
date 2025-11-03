@@ -23,6 +23,17 @@ export interface DashboardStats {
   passRate: number;
   reviewRate: number;
 }
+export type RepositoryProvider = 'GitHub' | 'GitLab' | 'Bitbucket';
+export interface Repository {
+  id: string;
+  name: string;
+  provider: RepositoryProvider;
+}
+export interface QualityGates {
+  autoMerge: number;
+  humanReview: number;
+  autoBlock: number;
+}
 export const dashboardStats: DashboardStats = {
   prsProcessed: 124,
   avgScore: 87,
@@ -110,3 +121,13 @@ export const mockPullRequests: PullRequest[] = [
     evaluations: [],
   },
 ];
+export const mockRepositories: Repository[] = [
+  { id: 'repo-1', name: 'aegis-qa/frontend', provider: 'GitHub' },
+  { id: 'repo-2', name: 'aegis-qa/backend', provider: 'GitHub' },
+  { id: 'repo-3', name: 'aegis-qa/infra', provider: 'GitLab' },
+];
+export const mockQualityGates: QualityGates = {
+  autoMerge: 90,
+  humanReview: 60,
+  autoBlock: 59,
+};
