@@ -4,7 +4,7 @@ import type { Env } from './core-utils';
 import { dashboardStats, mockPullRequests, mockRepositories, mockQualityGates } from './data';
 import type { PullRequest, DashboardStats, PRStatus, Repository, QualityGates, Evaluation, AgentName } from './data';
 const randomBetween = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1) + min);
-export class AppController extends DurableObject<Env> {
+export class AppController extends DurableObject<Env, unknown> {
   private sessions = new Map<string, SessionInfo>();
   private pullRequests: PullRequest[] = [];
   private dashboardStats: DashboardStats | null = null;

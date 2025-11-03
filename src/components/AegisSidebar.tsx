@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router-dom';
-import { Shield, LayoutDashboard, GitPullRequest, Settings, LifeBuoy } from 'lucide-react';
+import { Shield, LayoutDashboard, GitPullRequest, Settings, LifeBuoy, Workflow } from 'lucide-react';
 import { cn } from '@/lib/utils';
 const navItems = [
-  { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/', icon: Workflow, label: 'Ingestion Layer' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/pull-requests', icon: GitPullRequest, label: 'Pull Requests' },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];
@@ -19,7 +20,7 @@ export function AegisSidebar() {
             <li key={item.label}>
               <NavLink
                 to={item.href}
-                end
+                end={item.href === '/'}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',

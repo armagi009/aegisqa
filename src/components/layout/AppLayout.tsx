@@ -1,10 +1,8 @@
 import React from "react";
+import { Outlet } from "react-router-dom";
 import { AegisSidebar } from "@/components/AegisSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
-type AppLayoutProps = {
-  children: React.ReactNode;
-};
-export function AppLayout({ children }: AppLayoutProps): JSX.Element {
+export function AppLayout(): JSX.Element {
   return (
     <div className="min-h-screen w-full bg-muted/40">
       <AegisSidebar />
@@ -16,7 +14,7 @@ export function AppLayout({ children }: AppLayoutProps): JSX.Element {
           </div>
         </header>
         <main className="flex-1">
-          {children}
+          <Outlet />
         </main>
         <footer className="aegis-footer sm:pl-64">
           <p>Built with ❤️ at Cloudflare. Note: AI capabilities have a request limit across all user apps in a given time period.</p>

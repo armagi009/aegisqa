@@ -16,13 +16,18 @@ import { PullRequestsPage } from '@/pages/PullRequestsPage';
 import { PullRequestDetailPage } from '@/pages/PullRequestDetailPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { SupportPage } from '@/pages/SupportPage';
+import { IngestionLayerPage } from '@/pages/IngestionLayerPage';
 const router = createBrowserRouter([
   {
-    element: <AppLayout><RouteErrorBoundary /></AppLayout>, // Wrap all routes in AppLayout
+    element: <AppLayout />, // Wrap all routes in AppLayout
     errorElement: <RouteErrorBoundary />,
     children: [
       {
         path: "/",
+        element: <IngestionLayerPage />,
+      },
+      {
+        path: "/dashboard",
         element: <HomePage />,
       },
       {
