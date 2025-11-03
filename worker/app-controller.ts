@@ -11,7 +11,7 @@ export class AppController extends DurableObject<Env> {
   private repositories: Repository[] = [];
   private qualityGates: QualityGates | null = null;
   private loaded = false;
-  constructor(private ctx: DurableObjectState, env: Env) {
+  constructor(public ctx: DurableObjectState, env: Env) {
     super(ctx, env);
   }
   private async ensureLoaded(): Promise<void> {
@@ -74,7 +74,7 @@ export class AppController extends DurableObject<Env> {
     const agents: AgentName[] = ['Correctness', 'Architecture', 'Security', 'Performance', 'Maintainability'];
     const evaluations: Evaluation[] = agents.map(agent => ({
       agent,
-      score: Math.min(99, overallScore + randomBetween(-15, 15)),
+      score: Math.min(99, randomBetween(Math.max(0, overallScore - 15), Math.min(100, overallScore + 15))),
       summary: 'Evaluation complete',
       details: `The ${agent} agent analysis is complete with a score of ${this.pullRequests[prIndex].score}.`,
     }));
