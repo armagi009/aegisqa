@@ -2,7 +2,7 @@
 
 **The Datadog for the agent era—a multi-agent platform to test, validate, and monitor autonomous agent-generated code before it reaches production.**
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/armagi009/aegisqa)
 
 AegisQA is a sophisticated, enterprise-grade Quality Assurance platform designed for the era of autonomous coding. It acts as a critical validation layer, intercepting AI-generated pull requests from services like GitHub, GitLab, and Bitbucket before they reach production. The platform utilizes a cluster of specialized AI agents to evaluate the incoming code against multiple criteria: correctness, architectural compliance, security vulnerabilities, performance, and maintainability. Each pull request is assigned a quantitative risk score, which automates the development workflow by auto-merging high-quality code, flagging moderate-risk code for human review, and blocking high-risk submissions.
 
@@ -110,4 +110,4 @@ Your application will be deployed to the URL provided by Wrangler.
 
 Or deploy directly from your GitHub repository:
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/armagi009/aegisqa)
