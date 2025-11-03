@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PRStatusBadge } from '@/components/PRStatusBadge';
 import { ScoreDonutChart } from '@/components/ScoreDonutChart';
@@ -27,7 +27,7 @@ export function PullRequestDetailPage() {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
-  const fetchPullRequest = async () => {
+  const fetchPullRequest = useCallback(async () => {
     if (!id) return;
     try {
       const response = await fetch(`/api/pull-requests/${id}`);
@@ -42,17 +42,23 @@ export function PullRequestDetailPage() {
         // Still pending, continue polling
       } else {
         // Not pending anymore, or evaluation not started by this client, stop polling
-        if (pollingInterval.current) clearInterval(pollingInterval.current);
+        if (pollingInterval.current) {
+          clearInterval(pollingInterval.current);
+          pollingInterval.current = null;
+        }
         setIsEvaluating(false);
       }
       return fetchedPr;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      if (pollingInterval.current) clearInterval(pollingInterval.current);
+      if (pollingInterval.current) {
+        clearInterval(pollingInterval.current);
+        pollingInterval.current = null;
+      }
       setIsEvaluating(false);
       return null;
     }
-  };
+  }, [id, isEvaluating]);
   useEffect(() => {
     setLoading(true);
     fetchPullRequest().finally(() => setLoading(false));
@@ -61,7 +67,7 @@ export function PullRequestDetailPage() {
         clearInterval(pollingInterval.current);
       }
     };
-  }, [id]);
+  }, [id, fetchPullRequest]);
   const handleUpdateStatus = async (status: PRStatus) => {
     if (!pr) return;
     setIsActionLoading(true);
@@ -89,7 +95,6 @@ export function PullRequestDetailPage() {
     try {
       const response = await fetch(`/api/pull-requests/${pr.id}/evaluate`, { method: 'POST' });
       if (!response.ok) throw new Error('Failed to start evaluation');
-      // Start polling
       pollingInterval.current = setInterval(async () => {
         const updatedPr = await fetchPullRequest();
         if (updatedPr && updatedPr.status !== 'Pending') {
